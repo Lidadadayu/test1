@@ -100,6 +100,21 @@ def process_xyz_qm9(datafile):
     molecule = {key: torch.tensor(val) for key, val in molecule.items()}
 
     return molecule
+   def is_int(str):
+    try:
+        int(str)
+        return True
+    except:
+        return False
+
+
+# Cleanup. Use try-except to avoid race condition.
+def cleanup_file(file, cleanup=True):
+    if cleanup:
+        try:
+            os.remove(file)
+        except OSError:
+            pass
 
 
 
