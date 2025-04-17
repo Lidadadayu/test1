@@ -6,6 +6,7 @@ from os.path import join as join
 
 import numpy as np
 import pandas as pd
+import torch
 
 # 假设这些函数已经定义
 from process_util import process_qm9, process_xyz_qm9
@@ -18,11 +19,11 @@ def process_dataset_qm9(data_dir, data_name):
 
     print("now processing qm9 dataset:",qm9_tar_data)
 
-    #p判断数据集是否存在
+    #判断数据集是否存在
     if not os.path.exists(qm9_tar_data):
         raise FileNotFoundError(f"未找到数据集文件: {qm9_tar_data}")
      
-     #分割数据集，得到索引列表
+    #分割数据集，得到索引列表
     splits = gen_splits_qm9()
     print(splits.keys())
  
@@ -38,19 +39,26 @@ def process_dataset_qm9(data_dir, data_name):
     for split_idx, split_data in qm9_data.items():
         qm9_data[split_idx] = add_thermo_targets(split_data, therm_energy)
 
-    # Save processed QM9 data into train/validation/test splits
-    logging.info('Saving processed data:')
+    # Save processed QM9 data into train/validation/test splits as npz files
+    logging.info('Saving processed data as .npz files:')
     for key, value in qm9_data.items():
         print(f"Processing {key} data...")
-        if isinstance(value, np.ndarray):
-            # 将数组转换为 DataFrame
-            df = pd.DataFrame(value)
-            # 修改此处，使用 key 作为文件名的一部分
-            savedir = join(data_dir, f'{key}.csv')
-            print(f"Saving data to {savedir}")  # 添加调试信息
-            df.to_csv(savedir, index=False)
+        
+        # Convert PyTorch tensors to NumPy arrays
+        numpy_data = {}
+        for k, v in value.items():
+            if isinstance(v, torch.Tensor):
+                numpy_data[k] = v.detach().cpu().numpy()
+            else:
+                numpy_data[k] = v
+        
+        # Save as npz file
+        savedir = join(data_dir, f'{key}.npz')
+        print(f"Saving data to {savedir}")
+        np.savez_compressed(savedir, **numpy_data)
+        print(f"Successfully saved {key} data to {savedir}")
 
-    logging.info(f'successfully save csv data in folder:{data_dir}!')
+    logging.info(f'Successfully saved .npz data in folder: {data_dir}!')
 
 
 def gen_splits_qm9():
